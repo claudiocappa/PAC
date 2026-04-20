@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Piano d&#39;Accumulo</title>
+  <style>
+    :root {
+      --bg: #081a33;
+      --panel: #0f2747;
+      --panel-2: #14345d;
+      --text: #eef4ff;
+      --muted: #b8c8e6;
+      --accent: #60a5fa;
+      --accent-2: #3b82f6;
+      --good: #9ef7bf;
+      --bad: #ffd0d0;
+      --red-1: #ff4d4f;
+      --red-2: #ff6b6b;
+      --red-3: #ff8787;
+      --red-4: #d9485f;
+      --red-5: #ff9f9f;
+      --red-6: #c92a2a;
+      --yellow-1: #ffd84d;
+      --yellow-2: #ffef99;
+      --green-1: #25c27a;
+      --green-2: #9ef7bf;
+      --blue-1: #17335e;
+      --blue-2: #234b86;
+      --border: rgba(255,255,255,0.08);
+      --shadow: 0 12px 28px rgba(0,0,0,0.28);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #07162b 0%, #0f2747 100%);
+      color: var(--text);
+    }
+    .wrap { max-width: 1440px; margin: 0 auto; padding: 28px 18px 40px; }
+    .hero { display:block; margin-bottom:18px; }
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      backdrop-filter: blur(8px);
+    }
+    h1 { margin:0 0 10px 0; font-size:32px; line-height:1.08; letter-spacing:-0.03em; }
+    .subtitle { color:var(--muted); font-size:15px; line-height:1.58; margin:0; }
+    .pillrow { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+    .pill {
+      padding:9px 12px; border-radius:999px;
+      background: rgba(96,165,250,0.14); border: 1px solid rgba(96,165,250,0.28);
+      color: #dbeafe; font-size:13px;
+    }
+    .stats-mini, .kpis, .scenario-summary-grid { display:grid; gap:12px; }
+    .stats-mini { grid-template-columns: repeat(2, minmax(0,1fr)); height:100%; }
+    .statbox, .kpi, .scenario-summary { background: rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:16px; padding:16px; }
+    .label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px; }
+    .value { font-size:26px; font-weight:700; line-height:1.1; letter-spacing:-0.02em; }
+    .small { font-size:13px; color:var(--muted); margin-top:6px; line-height:1.45; }
+    .controls { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:14px; margin-bottom:18px; }
+    .control { display:flex; flex-direction:column; gap:8px; }
+    .control label { font-size:13px; color:var(--muted); }
+    input, select, button { font:inherit; }
+    input, select {
+      width:100%; background:#0f1f37; color:var(--text); border:1px solid var(--border);
+      border-radius:12px; padding:12px 13px; font-size:15px; outline:none;
+    }
+    input:focus, select:focus { border-color: rgba(96,165,250,0.68); box-shadow:0 0 0 4px rgba(96,165,250,0.14); }
+    .scenario-toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+    .btn { border:1px solid rgba(96,165,250,0.34); color:#eff6ff; background:rgba(96,165,250,0.18); padding:10px 14px; border-radius:12px; cursor:pointer; transition:0.18s ease; }
+    .btn:hover { transform:translateY(-1px); background:rgba(96,165,250,0.24); }
+    .btn.secondary { background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.08); }
+    .scenario-grid { display:grid; gap:12px; }
+    .scenario-row { display:grid; grid-template-columns:34px 80px minmax(150px,1fr) minmax(130px,0.65fr) minmax(170px,0.95fr) 100px; gap:12px; align-items:center; padding:14px; border-radius:16px; border:1px solid var(--border); background:rgba(255,255,255,0.02); }
+    .scenario-color { width:16px; height:16px; border-radius:999px; box-shadow:0 0 0 5px rgba(255,255,255,0.03); margin:0 auto; }
+    .scenario-toggle { display:flex; align-items:center; justify-content:center; }
+    .scenario-toggle input { width:18px; height:18px; accent-color:#ef4444; }
+    .scenario-actions { display:flex; justify-content:flex-end; }
+    .scenario-helper { color:var(--muted); font-size:13px; margin-top:8px; line-height:1.5; }
+    .kpis { grid-template-columns: repeat(5, minmax(0,1fr)); margin-top:18px; margin-bottom:18px; }
+    .kpi .num { margin-top:8px; font-weight:750; font-size:28px; letter-spacing:-0.03em; }
+    .kpi .sub { margin-top:6px; color:var(--muted); font-size:13px; }
+    .scenario-summary-grid { grid-template-columns: repeat(3, minmax(0,1fr)); margin-top:12px; }
+    .scenario-summary { position:relative; overflow:hidden; }
+    .scenario-summary::before { content:''; position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--summary-color, var(--accent)); }
+    .scenario-summary .topline { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; }
+    .scenario-summary .title { font-weight:700; }
+    .scenario-summary .mini-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:10px; margin-top:10px; }
+    .mini-item { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:12px; padding:10px; }
+    .mini-label { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:0.08em; }
+    .mini-value { margin-top:6px; font-size:16px; font-weight:700; }
+    .grid { display:grid; grid-template-columns:1.45fr 0.9fr; gap:18px; }
+    .section-title { font-size:18px; font-weight:700; margin:0 0 14px; letter-spacing:-0.02em; }
+    .chartbox { padding:14px 16px 12px; }
+    .chart-svg-wrap { position:relative; }
+    .chart-tooltip {
+      position:absolute;
+      min-width:260px;
+      max-width:340px;
+      padding:12px 14px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.10);
+      background:rgba(7,22,43,0.94);
+      box-shadow:0 16px 34px rgba(0,0,0,0.34);
+      color:#eef4ff;
+      font-size:13px;
+      line-height:1.5;
+      pointer-events:none;
+      z-index:4;
+      backdrop-filter:blur(10px);
+    }
+    .chart-tooltip.hidden { display:none; }
+    .chart-tooltip .tip-head { font-weight:700; margin-bottom:8px; color:#ffffff; }
+    .chart-tooltip .tip-sub { color:#d7e4ff; font-size:12px; margin-top:-4px; margin-bottom:10px; }
+    .chart-tooltip .tip-row { display:grid; grid-template-columns:14px 1fr; gap:8px; align-items:start; margin-top:8px; }
+    .chart-tooltip .tip-dot { width:10px; height:10px; border-radius:999px; margin-top:5px; }
+    .chart-tooltip .tip-name { color:#ffffff; font-weight:700; }
+    .chart-tooltip .tip-line { color:#dfe8ff; }
+    svg { width:100%; height:auto; display:block; }
+    .legend { display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; color:var(--muted); font-size:13px; }
+    .legend-item { display:inline-flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .legend-item .legend-meta { color:#dcf7e4; font-size:12px; }
+    .dot { width:10px; height:10px; border-radius:999px; display:inline-block; }
+    .legend-line { width:20px; height:3px; border-radius:999px; display:inline-block; }
+    .tablewrap { overflow:auto; border-radius:14px; border:1px solid var(--border); max-height:520px; }
+    table { width:100%; border-collapse:collapse; min-width:560px; background:rgba(255,255,255,0.015); }
+    th, td { padding:12px 14px; text-align:left; font-size:14px; border-bottom:1px solid rgba(255,255,255,0.06); }
+    th { color:#eff6ff; background:rgba(255,255,255,0.05); position:sticky; top:0; z-index:1; }
+    tbody tr:hover { background:rgba(255,255,255,0.025); }
+    .pos { color:var(--good); font-weight:600; }
+    .neg { color:var(--bad); font-weight:600; }
+    .tag { font-size:11px; padding:4px 8px; border-radius:999px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.26); color:#ffe1e1; }
+    .note-list { display:grid; gap:10px; margin-top:12px; }
+    .note-item { padding:12px 13px; border-radius:12px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.05); color:var(--muted); font-size:14px; line-height:1.5; }
+    .foot { margin-top:18px; color:var(--muted); font-size:12px; line-height:1.55; }
+    .muted-strong { color:#eff6ff; font-weight:600; }
+    .empty-state { color:var(--muted); font-size:14px; padding:22px 10px 8px; }
+    .section-block { margin-bottom:18px; padding:18px; border-radius:24px; border:1px solid rgba(255,255,255,0.10); box-shadow:var(--shadow); }
+    .section-head { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
+    .section-head h2 { margin:0; font-size:24px; letter-spacing:-0.03em; }
+    .section-caption { font-size:12px; text-transform:uppercase; letter-spacing:0.14em; font-weight:700; margin-bottom:6px; }
+    .section-lead { margin:0; font-size:14px; line-height:1.55; max-width:860px; }
+    .section-yellow { background:linear-gradient(180deg, rgba(255,216,77,0.30), rgba(255,216,77,0.14)); border-color:rgba(255,216,77,0.32); }
+    .section-yellow .section-caption, .section-yellow .section-lead, .section-yellow .section-title, .section-yellow .scenario-helper, .section-yellow .control label { color:#ffffff; }
+    .section-yellow .scenario-row, .section-yellow .card { background:rgba(255,255,255,0.30); border-color:rgba(138,103,0,0.16); }
+    .section-yellow input, .section-yellow select { background:rgba(255,255,255,0.90); color:#14345d; border-color:rgba(143,109,5,0.22); }
+    .section-yellow .btn { background:#1d4ed8; border-color:#1d4ed8; color:#fff; }
+    .section-yellow .btn:hover { background:#1e40af; }
+    .section-yellow .btn.secondary { background:rgba(20,52,93,0.18); border-color:rgba(255,255,255,0.22); color:#ffffff; }
+    .section-red { background:linear-gradient(180deg, rgba(239,68,68,0.20), rgba(127,29,29,0.12)); border-color:rgba(248,113,113,0.32); }
+    .section-red .kpi, .section-red .scenario-summary { background:rgba(255,255,255,0.07); border-color:rgba(255,255,255,0.10); }
+
+    .section-red .section-caption, .section-red .section-title, .section-red .section-lead,
+    .section-red .label, .section-red .sub, .section-red .mini-label,
+    .section-red .title, .section-red .mini-value, .section-red .empty-state {
+      color:#ffffff;
+    }
+    .section-red .scenario-summary-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+
+    .section-green { background:linear-gradient(180deg, rgba(34,197,94,0.18), rgba(21,128,61,0.10)); border-color:rgba(74,222,128,0.28); }
+    .section-green .card { background:rgba(255,255,255,0.04); }
+    .section-green .section-caption { color:#d7ffe6; }
+    .section-blue { background:linear-gradient(180deg, rgba(35,75,134,0.34), rgba(23,51,94,0.24)); border-color:rgba(147,197,253,0.18); }
+    .section-blue .card { background:rgba(255,255,255,0.035); }
+    .mini-grid-2 { display:grid; grid-template-columns:1.45fr 0.9fr; gap:18px; }
+    @media (max-width: 1180px) {
+      .hero, .grid, .mini-grid-2 { grid-template-columns:1fr; }
+      .controls { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .kpis { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .scenario-summary-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+    @media (max-width: 760px) {
+      .controls, .kpis, .stats-mini, .scenario-summary-grid { grid-template-columns:1fr; }
+      .scenario-row { grid-template-columns:24px 54px 1fr; }
+      .scenario-row .control, .scenario-actions { grid-column: 1 / -1; }
+      .scenario-row > .control, .scenario-actions { grid-column: 1 / -1; }
+      h1 { font-size:28px; }
+    }
+
+    .subcontrols { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:14px; margin-top:14px; }
+    .future-panel {
+      margin-top:14px; padding:16px; border-radius:18px;
+      background:rgba(255,255,255,0.22); border:1px solid rgba(255,255,255,0.28);
+    }
+    .future-panel .section-title-sm { margin:0 0 10px 0; font-size:16px; color:#ffffff; }
+    .future-panel .helper { margin-top:10px; color:rgba(255,255,255,0.92); font-size:13px; line-height:1.5; }
+    textarea {
+      width:100%; min-height:118px; resize:vertical; background:#0f1f37; color:var(--text);
+      border:1px solid var(--border); border-radius:12px; padding:12px 13px; font-size:15px; outline:none;
+    }
+    textarea:focus { border-color: rgba(96,165,250,0.68); box-shadow:0 0 0 4px rgba(96,165,250,0.14); }
+    .section-yellow textarea { background:rgba(255,255,255,0.92); color:#14345d; border-color:rgba(143,109,5,0.22); }
+    .toggle-note {
+      margin-top:14px; padding:12px 14px; border-radius:14px;
+      background:rgba(220,38,38,0.16); border:1px solid rgba(255,255,255,0.18); color:#ffffff;
+      font-size:13px; line-height:1.5;
+    }
+    .hidden { display:none !important; }
+    .section-disabled {
+      opacity:0.42;
+      pointer-events:none;
+      filter:grayscale(0.12);
+    }
+    .disabled-banner {
+      margin-top:10px; padding:12px 14px; border-radius:14px;
+      background:rgba(239,68,68,0.12); border:1px solid rgba(248,113,113,0.25);
+      color:#ffe5e5; font-size:13px; line-height:1.5;
+    }
+    .export-wrap { margin-top:22px; display:flex; justify-content:flex-end; }
+    .export-btn {
+      border:1px solid rgba(255,255,255,0.22);
+      background:#1d4ed8; color:#ffffff; border-radius:14px; padding:13px 18px;
+      font-weight:700; cursor:pointer; box-shadow:var(--shadow);
+    }
+    .export-btn:hover { background:#1e40af; }
+    .mode-badge {
+      display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px;
+      background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.15); color:#ffffff; font-size:12px;
+    }
+    @media (max-width: 980px) {
+      .subcontrols { grid-template-columns:1fr; }
+    }
+    @media print {
+      body { background:#ffffff; }
+      .wrap { max-width:none; padding:0; }
+      .no-print { display:none !important; }
+      .section-block, .card { box-shadow:none !important; backdrop-filter:none !important; }
+      .section-yellow, .section-red, .section-green, .section-blue {
+        break-inside: avoid; page-break-inside: avoid;
+      }
+      input, select, textarea {
+        border:1px solid #cccccc !important;
+        color:#000000 !important;
+        background:#ffffff !important;
+      }
+      .tablewrap { max-height:none; overflow:visible; }
+      svg { max-width:100%; }
+    }
+  
+    .dashboard-footer {
+      margin-top: 32px;
+      padding: 18px 20px 8px;
+      text-align: center;
+      color: #e8eefc;
+      font-size: 13px;
+      line-height: 1.6;
+      border-top: 1px solid rgba(255,255,255,0.18);
+    }
+
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div class="card">
+        <h1>Dashboard Piano d&#39;Accumulo</h1>
+        <p class="subtitle">
+          Confronta più piani di accumulo mensili nello stesso grafico e scegli se usare la
+          <span class="muted-strong">base storica MSCI World</span> oppure uno
+          <span class="muted-strong">scenario futuro personalizzato</span> con rendimenti inseriti da te.
+        </p>
+      </div>
+    </section>
+
+    
+<section class="section-block section-yellow">
+      <div class="section-head">
+        <div>
+          <div class="section-caption">Sezione 1</div>
+          <h2>Inserimento dati</h2>
+          <p class="section-lead">Qui imposti la durata, scegli se lavorare sullo storico MSCI World oppure su uno scenario futuro personalizzato e definisci i vari versamenti mensili da confrontare.</p>
+        </div>
+        <div class="mode-badge" id="modeBadge">Modalità attiva: Storico</div>
+      </div>
+
+      <div class="controls">
+        <div class="control">
+          <label for="dataMode">Base simulazione</label>
+          <select id="dataMode">
+            <option value="historical" selected>Storico MSCI World</option>
+            <option value="future">Scenario futuro personalizzato</option>
+          </select>
+        </div>
+        <div class="control">
+          <label for="durationValue">Durata</label>
+          <input id="durationValue" type="number" min="1" step="1" value="10">
+        </div>
+        <div class="control">
+          <label for="durationUnit">Unità durata</label>
+          <select id="durationUnit">
+            <option value="years" selected>Anni</option>
+            <option value="months">Mesi</option>
+          </select>
+        </div>
+        <div class="control">
+          <label for="futureReturnMode">Metodo rendimento futuro</label>
+          <select id="futureReturnMode">
+            <option value="constant" selected>Rendimento annuo costante</option>
+            <option value="series">Serie annuale personalizzata</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="historicalControls">
+        <div class="subcontrols">
+          <div class="control">
+            <label for="mode">Metodo simulazione storica</label>
+            <select id="mode">
+              <option value="cagr" selected>Media composta storica</option>
+              <option value="sequence">Sequenza mensile ciclica</option>
+            </select>
+          </div>
+          <div class="control">
+            <label for="startYear">Anno iniziale sequenza</label>
+            <select id="startYear"></select>
+          </div>
+          <div class="control">
+            <label>Uso della base storica</label>
+            <input type="text" value="Serie mensile equivalente MSCI World" readonly>
+          </div>
+        </div>
+      </div>
+
+      <div id="futureControls" class="future-panel hidden">
+        <h3 class="section-title-sm">Scenario futuro personalizzato</h3>
+        <div class="subcontrols">
+          <div class="control">
+            <label for="futureAnnualReturn">Rendimento annuo atteso (%)</label>
+            <input id="futureAnnualReturn" type="number" step="0.1" value="7.0">
+          </div>
+          <div class="control">
+            <label for="futureSeriesStyle">Applicazione serie personalizzata</label>
+            <select id="futureSeriesStyle">
+              <option value="repeat_last" selected>Ripeti ultimo valore</option>
+              <option value="cycle">Ripeti la sequenza</option>
+            </select>
+          </div>
+          <div class="control">
+            <label>Nota</label>
+            <input type="text" value="I versamenti restano mensili, a fine mese." readonly>
+          </div>
+        </div>
+        <div class="control" style="margin-top:14px;">
+          <label for="futureReturnSeries">Serie rendimenti annuali personalizzati (%)</label>
+          <textarea id="futureReturnSeries" placeholder="Esempio: 8, 6.5, 5, 7, 4&#10;Ogni numero rappresenta un anno. Se la durata è più lunga, puoi scegliere se ripetere l’ultimo valore o l’intera sequenza.">8, 6.5, 5, 7, 4</textarea>
+        </div>
+        <div class="helper">Quando scegli <strong>Scenario futuro personalizzato</strong>, la dashboard smette di usare le serie storiche MSCI e usa solo i rendimenti che inserisci tu. Ogni scenario attivo può avere un proprio rendimento futuro dedicato, che viene riportato sia nei box di confronto sia nel grafico.</div>
+      </div>
+
+      <div id="historicalDisabledNote" class="toggle-note hidden">
+        In modalità <strong>Scenario futuro personalizzato</strong> la sezione “Approfondimenti storici” viene disattivata, perché la simulazione non usa più le serie storiche MSCI World.
+      </div>
+
+      <div class="scenario-toolbar">
+        <div>
+          <h2 class="section-title" style="margin-bottom:6px;">Scenari di versamento mensile</h2>
+          <div class="scenario-helper">Puoi confrontare fino a 6 rate mensili nello stesso grafico. La sezione 2 mostra soltanto i box degli scenari attivi.</div>
+        </div>
+        <button class="btn no-print" id="addScenarioBtn" type="button">+ Aggiungi scenario</button>
+      </div>
+
+      <div id="scenarioRows" class="scenario-grid"></div>
+    </section>
+
+
+    <section class="section-block section-red">
+      <div class="section-head">
+        <div>
+          <div class="section-caption">Sezione 2</div>
+          <h2>Confronto scenari attivi</h2>
+          <p class="section-lead">In questa sezione trovi i box di confronto degli scenari attivi. In modalità futura, ogni box riassume anche il rendimento personalizzato usato per quello specifico scenario.</p>
+        </div>
+      </div>
+      <div id="scenarioSummaryGrid" class="scenario-summary-grid"></div>
+    </section>
+
+    <section class="section-block section-green">
+      <div class="section-head">
+        <div>
+          <div class="section-caption">Sezione 3</div>
+          <h2>Curve di confronto</h2>
+          <p class="section-lead">Le curve PAC restano in rosso per confrontare con immediatezza come cambia la traiettoria del portafoglio al variare della rata mensile e, in modalità futura, del rendimento inserito per ciascuno scenario.</p>
+        </div>
+      </div>
+      <div class="mini-grid-2">
+        <div class="card chartbox">
+          <h2 class="section-title">Confronto curve PAC</h2>
+          <div class="chart-svg-wrap"><svg id="growthChart" viewBox="0 0 900 460" aria-label="Grafico evoluzione PAC multiscenario"></svg><div id="growthTooltip" class="chart-tooltip hidden" aria-hidden="true"></div></div>
+          <div class="legend" id="growthLegend"></div>
+          <div class="foot">
+            Il grafico mostra il <span class="muted-strong">valore del portafoglio</span> per ogni scenario attivo.
+            Le curve sono volutamente in rosso per evidenziare subito le differenze di traiettoria tra rate diverse.
+          </div>
+        </div>
+
+        <div class="card chartbox">
+          <h2 class="section-title">Riepilogo confronto scenari</h2>
+          <div class="tablewrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Scenario</th>
+                  <th>Rata</th>
+                  <th>Versato</th>
+                  <th>Valore finale</th>
+                  <th>Rendimento usato</th>
+                  <th>Rendimento totale</th>
+                </tr>
+              </thead>
+              <tbody id="comparisonTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-block section-blue" id="historicalSection">
+      <div class="section-head">
+        <div>
+          <div class="section-caption">Approfondimenti storici</div>
+          <h2>Dati MSCI World usati nella dashboard</h2>
+          <p class="section-lead">Qui trovi la serie mensile equivalente, i rendimenti annuali ufficiali e le note metodologiche utilizzate per la simulazione storica.</p>
+          <div id="historicalSectionBanner" class="disabled-banner hidden">Sezione disattivata: stai usando uno scenario futuro personalizzato con rendimenti inseriti manualmente.</div>
+        </div>
+      </div>
+      <section class="grid">
+        <div class="card chartbox">
+          <h2 class="section-title">Serie mensile equivalente MSCI World</h2>
+          <svg id="monthlyChart" viewBox="0 0 760 420" aria-label="Serie mensile equivalente MSCI World"></svg>
+          <div class="foot">
+            Livello indice ricostruito mese per mese in modo coerente con il factsheet ufficiale MSCI.
+          </div>
+        </div>
+
+        <div class="card chartbox">
+          <h2 class="section-title">Rendimenti annuali ufficiali</h2>
+          <svg id="barChart" viewBox="0 0 560 420" aria-label="Grafico rendimenti annuali"></svg>
+          <div class="foot">
+            La riga 2026 è un dato <span class="muted-strong">YTD</span> al 31 marzo 2026 e non un intero anno.
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="section-title">Serie mensile usata nella dashboard</h2>
+          <div class="tablewrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Mese</th>
+                  <th>Livello indice</th>
+                  <th>Rendimento mensile</th>
+                  <th>Origine</th>
+                </tr>
+              </thead>
+              <tbody id="monthlyTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="section-title">Assunzioni e note</h2>
+          <div class="note-list">
+            <div class="note-item">Ogni simulazione versa la rata <span class="muted-strong">a fine mese</span>.</div>
+            <div class="note-item">La serie mensile è <span class="muted-strong">equivalente</span>, non un export ufficiale end-of-month già pronto: è stata ricostruita dal factsheet MSCI usando il livello cumulato 100 → 392,89, le performance annuali 2012–2025 e il dato YTD 2026.</div>
+            <div class="note-item">Per <span class="muted-strong">aprile–dicembre 2011</span> la dashboard ricava un tratto mensile coerente con il livello finale ufficiale di marzo 2026.</div>
+            <div class="note-item">La modalità <span class="muted-strong">Media composta storica</span> usa il CAGR dell’intero periodo marzo 2011–marzo 2026. La modalità <span class="muted-strong">Sequenza mensile ciclica</span> ripete invece i rendimenti mensili equivalenti in ordine cronologico.</div>
+            <div class="note-item">La sezione 2 mostra soltanto i box di confronto degli scenari attivi, senza il riepilogo singolo dedicato.</div>
+          </div>
+          <div class="foot">
+            Fonti:<br>
+            https://www.msci.com/documents/10199/255599/msci-world-index-eur-price.pdf<br>
+            https://www.msci.com/indexes/index/990100<br>
+            https://www.investing.com/indices/msci-world-price-eur-historical-data
+          </div>
+        </div>
+      </section>
+    </section></section>
+
+    <div class="export-wrap no-print">
+      <button type="button" class="export-btn" id="exportPdfBtn">Esporta i dati in PDF</button>
+    </div>
+  </div>
+
+  <script>
+    const annualHistorical = [{"year": 2012, "type": "full_year", "return": 11.44}, {"year": 2013, "type": "full_year", "return": 18.74}, {"year": 2014, "type": "full_year", "return": 17.21}, {"year": 2015, "type": "full_year", "return": 8.34}, {"year": 2016, "type": "full_year", "return": 8.47}, {"year": 2017, "type": "full_year", "return": 5.5}, {"year": 2018, "type": "full_year", "return": -5.92}, {"year": 2019, "type": "full_year", "return": 27.49}, {"year": 2020, "type": "full_year", "return": 4.64}, {"year": 2021, "type": "full_year", "return": 29.26}, {"year": 2022, "type": "full_year", "return": -14.19}, {"year": 2023, "type": "full_year", "return": 17.64}, {"year": 2024, "type": "full_year", "return": 24.81}, {"year": 2025, "type": "full_year", "return": 5.35}, {"year": 2026, "type": "ytd", "return": -2.03}];
+    const monthlyHistorical = [{"date": "2011-03", "level": 100.0, "monthly_return": null, "segment": "base"}, {"date": "2011-04", "level": 99.65, "monthly_return": -0.3547, "segment": "reconstructed_2011"}, {"date": "2011-05", "level": 99.29, "monthly_return": -0.3547, "segment": "reconstructed_2011"}, {"date": "2011-06", "level": 98.94, "monthly_return": -0.3547, "segment": "reconstructed_2011"}, {"date": "2011-07", "level": 98.59, "monthly_return": -0.3547, "segment": "reconstructed_2011"}, {"date": "2011-08", "level": 98.24, "monthly_return": -0.3547, "segment": "reconstructed_2011"}, {"date": "2011-09", "level": 97.89, "monthly_return": -0.3547, "segment": "reconstructed_2011"}, {"date": "2011-10", "level": 97.54, "monthly_return": -0.3547, "segment": "reconstructed_2011"}, {"date": "2011-11", "level": 97.2, "monthly_return": -0.3547, "segment": "reconstructed_2011"}, {"date": "2011-12", "level": 96.85, "monthly_return": -0.3547, "segment": "reconstructed_2011"}, {"date": "2012-01", "level": 97.73, "monthly_return": 0.9067, "segment": "full_year"}, {"date": "2012-02", "level": 98.62, "monthly_return": 0.9067, "segment": "full_year"}, {"date": "2012-03", "level": 99.51, "monthly_return": 0.9067, "segment": "full_year"}, {"date": "2012-04", "level": 100.41, "monthly_return": 0.9067, "segment": "full_year"}, {"date": "2012-05", "level": 101.32, "monthly_return": 0.9067, "segment": "full_year"}, {"date": "2012-06", "level": 102.24, "monthly_return": 0.9067, "segment": "full_year"}, {"date": "2012-07", "level": 103.17, "monthly_return": 0.9067, "segment": "full_year"}, {"date": "2012-08", "level": 104.11, "monthly_return": 0.9067, "segment": "full_year"}, {"date": "2012-09", "level": 105.05, "monthly_return": 0.9067, "segment": "full_year"}, {"date": "2012-10", "level": 106.0, "monthly_return": 0.9067, "segment": "full_year"}, {"date": "2012-11", "level": 106.96, "monthly_return": 0.9067, "segment": "full_year"}, {"date": "2012-12", "level": 107.93, "monthly_return": 0.9067, "segment": "full_year"}, {"date": "2013-01", "level": 109.49, "monthly_return": 1.4417, "segment": "full_year"}, {"date": "2013-02", "level": 111.07, "monthly_return": 1.4417, "segment": "full_year"}, {"date": "2013-03", "level": 112.67, "monthly_return": 1.4417, "segment": "full_year"}, {"date": "2013-04", "level": 114.29, "monthly_return": 1.4417, "segment": "full_year"}, {"date": "2013-05", "level": 115.94, "monthly_return": 1.4417, "segment": "full_year"}, {"date": "2013-06", "level": 117.61, "monthly_return": 1.4417, "segment": "full_year"}, {"date": "2013-07", "level": 119.31, "monthly_return": 1.4417, "segment": "full_year"}, {"date": "2013-08", "level": 121.03, "monthly_return": 1.4417, "segment": "full_year"}, {"date": "2013-09", "level": 122.77, "monthly_return": 1.4417, "segment": "full_year"}, {"date": "2013-10", "level": 124.54, "monthly_return": 1.4417, "segment": "full_year"}, {"date": "2013-11", "level": 126.34, "monthly_return": 1.4417, "segment": "full_year"}, {"date": "2013-12", "level": 128.16, "monthly_return": 1.4417, "segment": "full_year"}, {"date": "2014-01", "level": 129.87, "monthly_return": 1.3321, "segment": "full_year"}, {"date": "2014-02", "level": 131.6, "monthly_return": 1.3321, "segment": "full_year"}, {"date": "2014-03", "level": 133.35, "monthly_return": 1.3321, "segment": "full_year"}, {"date": "2014-04", "level": 135.13, "monthly_return": 1.3321, "segment": "full_year"}, {"date": "2014-05", "level": 136.93, "monthly_return": 1.3321, "segment": "full_year"}, {"date": "2014-06", "level": 138.75, "monthly_return": 1.3321, "segment": "full_year"}, {"date": "2014-07", "level": 140.6, "monthly_return": 1.3321, "segment": "full_year"}, {"date": "2014-08", "level": 142.47, "monthly_return": 1.3321, "segment": "full_year"}, {"date": "2014-09", "level": 144.37, "monthly_return": 1.3321, "segment": "full_year"}, {"date": "2014-10", "level": 146.29, "monthly_return": 1.3321, "segment": "full_year"}, {"date": "2014-11", "level": 148.24, "monthly_return": 1.3321, "segment": "full_year"}, {"date": "2014-12", "level": 150.22, "monthly_return": 1.3321, "segment": "full_year"}, {"date": "2015-01", "level": 151.22, "monthly_return": 0.6698, "segment": "full_year"}, {"date": "2015-02", "level": 152.23, "monthly_return": 0.6698, "segment": "full_year"}, {"date": "2015-03", "level": 153.25, "monthly_return": 0.6698, "segment": "full_year"}, {"date": "2015-04", "level": 154.28, "monthly_return": 0.6698, "segment": "full_year"}, {"date": "2015-05", "level": 155.31, "monthly_return": 0.6698, "segment": "full_year"}, {"date": "2015-06", "level": 156.35, "monthly_return": 0.6698, "segment": "full_year"}, {"date": "2015-07", "level": 157.4, "monthly_return": 0.6698, "segment": "full_year"}, {"date": "2015-08", "level": 158.46, "monthly_return": 0.6698, "segment": "full_year"}, {"date": "2015-09", "level": 159.52, "monthly_return": 0.6698, "segment": "full_year"}, {"date": "2015-10", "level": 160.59, "monthly_return": 0.6698, "segment": "full_year"}, {"date": "2015-11", "level": 161.66, "monthly_return": 0.6698, "segment": "full_year"}, {"date": "2015-12", "level": 162.74, "monthly_return": 0.6698, "segment": "full_year"}, {"date": "2016-01", "level": 163.85, "monthly_return": 0.6798, "segment": "full_year"}, {"date": "2016-02", "level": 164.96, "monthly_return": 0.6798, "segment": "full_year"}, {"date": "2016-03", "level": 166.09, "monthly_return": 0.6798, "segment": "full_year"}, {"date": "2016-04", "level": 167.21, "monthly_return": 0.6798, "segment": "full_year"}, {"date": "2016-05", "level": 168.35, "monthly_return": 0.6798, "segment": "full_year"}, {"date": "2016-06", "level": 169.5, "monthly_return": 0.6798, "segment": "full_year"}, {"date": "2016-07", "level": 170.65, "monthly_return": 0.6798, "segment": "full_year"}, {"date": "2016-08", "level": 171.81, "monthly_return": 0.6798, "segment": "full_year"}, {"date": "2016-09", "level": 172.98, "monthly_return": 0.6798, "segment": "full_year"}, {"date": "2016-10", "level": 174.15, "monthly_return": 0.6798, "segment": "full_year"}, {"date": "2016-11", "level": 175.34, "monthly_return": 0.6798, "segment": "full_year"}, {"date": "2016-12", "level": 176.53, "monthly_return": 0.6798, "segment": "full_year"}, {"date": "2017-01", "level": 177.32, "monthly_return": 0.4472, "segment": "full_year"}, {"date": "2017-02", "level": 178.11, "monthly_return": 0.4472, "segment": "full_year"}, {"date": "2017-03", "level": 178.91, "monthly_return": 0.4472, "segment": "full_year"}, {"date": "2017-04", "level": 179.71, "monthly_return": 0.4472, "segment": "full_year"}, {"date": "2017-05", "level": 180.51, "monthly_return": 0.4472, "segment": "full_year"}, {"date": "2017-06", "level": 181.32, "monthly_return": 0.4472, "segment": "full_year"}, {"date": "2017-07", "level": 182.13, "monthly_return": 0.4472, "segment": "full_year"}, {"date": "2017-08", "level": 182.94, "monthly_return": 0.4472, "segment": "full_year"}, {"date": "2017-09", "level": 183.76, "monthly_return": 0.4472, "segment": "full_year"}, {"date": "2017-10", "level": 184.58, "monthly_return": 0.4472, "segment": "full_year"}, {"date": "2017-11", "level": 185.41, "monthly_return": 0.4472, "segment": "full_year"}, {"date": "2017-12", "level": 186.24, "monthly_return": 0.4472, "segment": "full_year"}, {"date": "2018-01", "level": 185.29, "monthly_return": -0.5072, "segment": "full_year"}, {"date": "2018-02", "level": 184.35, "monthly_return": -0.5072, "segment": "full_year"}, {"date": "2018-03", "level": 183.42, "monthly_return": -0.5072, "segment": "full_year"}, {"date": "2018-04", "level": 182.49, "monthly_return": -0.5072, "segment": "full_year"}, {"date": "2018-05", "level": 181.56, "monthly_return": -0.5072, "segment": "full_year"}, {"date": "2018-06", "level": 180.64, "monthly_return": -0.5072, "segment": "full_year"}, {"date": "2018-07", "level": 179.72, "monthly_return": -0.5072, "segment": "full_year"}, {"date": "2018-08", "level": 178.81, "monthly_return": -0.5072, "segment": "full_year"}, {"date": "2018-09", "level": 177.91, "monthly_return": -0.5072, "segment": "full_year"}, {"date": "2018-10", "level": 177.0, "monthly_return": -0.5072, "segment": "full_year"}, {"date": "2018-11", "level": 176.1, "monthly_return": -0.5072, "segment": "full_year"}, {"date": "2018-12", "level": 175.21, "monthly_return": -0.5072, "segment": "full_year"}, {"date": "2019-01", "level": 178.79, "monthly_return": 2.0445, "segment": "full_year"}, {"date": "2019-02", "level": 182.45, "monthly_return": 2.0445, "segment": "full_year"}, {"date": "2019-03", "level": 186.18, "monthly_return": 2.0445, "segment": "full_year"}, {"date": "2019-04", "level": 189.99, "monthly_return": 2.0445, "segment": "full_year"}, {"date": "2019-05", "level": 193.87, "monthly_return": 2.0445, "segment": "full_year"}, {"date": "2019-06", "level": 197.83, "monthly_return": 2.0445, "segment": "full_year"}, {"date": "2019-07", "level": 201.88, "monthly_return": 2.0445, "segment": "full_year"}, {"date": "2019-08", "level": 206.01, "monthly_return": 2.0445, "segment": "full_year"}, {"date": "2019-09", "level": 210.22, "monthly_return": 2.0445, "segment": "full_year"}, {"date": "2019-10", "level": 214.52, "monthly_return": 2.0445, "segment": "full_year"}, {"date": "2019-11", "level": 218.9, "monthly_return": 2.0445, "segment": "full_year"}, {"date": "2019-12", "level": 223.38, "monthly_return": 2.0445, "segment": "full_year"}, {"date": "2020-01", "level": 224.22, "monthly_return": 0.3787, "segment": "full_year"}, {"date": "2020-02", "level": 225.07, "monthly_return": 0.3787, "segment": "full_year"}, {"date": "2020-03", "level": 225.92, "monthly_return": 0.3787, "segment": "full_year"}, {"date": "2020-04", "level": 226.78, "monthly_return": 0.3787, "segment": "full_year"}, {"date": "2020-05", "level": 227.64, "monthly_return": 0.3787, "segment": "full_year"}, {"date": "2020-06", "level": 228.5, "monthly_return": 0.3787, "segment": "full_year"}, {"date": "2020-07", "level": 229.37, "monthly_return": 0.3787, "segment": "full_year"}, {"date": "2020-08", "level": 230.23, "monthly_return": 0.3787, "segment": "full_year"}, {"date": "2020-09", "level": 231.11, "monthly_return": 0.3787, "segment": "full_year"}, {"date": "2020-10", "level": 231.98, "monthly_return": 0.3787, "segment": "full_year"}, {"date": "2020-11", "level": 232.86, "monthly_return": 0.3787, "segment": "full_year"}, {"date": "2020-12", "level": 233.74, "monthly_return": 0.3787, "segment": "full_year"}, {"date": "2021-01", "level": 238.8, "monthly_return": 2.1618, "segment": "full_year"}, {"date": "2021-02", "level": 243.96, "monthly_return": 2.1618, "segment": "full_year"}, {"date": "2021-03", "level": 249.23, "monthly_return": 2.1618, "segment": "full_year"}, {"date": "2021-04", "level": 254.62, "monthly_return": 2.1618, "segment": "full_year"}, {"date": "2021-05", "level": 260.12, "monthly_return": 2.1618, "segment": "full_year"}, {"date": "2021-06", "level": 265.75, "monthly_return": 2.1618, "segment": "full_year"}, {"date": "2021-07", "level": 271.49, "monthly_return": 2.1618, "segment": "full_year"}, {"date": "2021-08", "level": 277.36, "monthly_return": 2.1618, "segment": "full_year"}, {"date": "2021-09", "level": 283.36, "monthly_return": 2.1618, "segment": "full_year"}, {"date": "2021-10", "level": 289.48, "monthly_return": 2.1618, "segment": "full_year"}, {"date": "2021-11", "level": 295.74, "monthly_return": 2.1618, "segment": "full_year"}, {"date": "2021-12", "level": 302.13, "monthly_return": 2.1618, "segment": "full_year"}, {"date": "2022-01", "level": 298.31, "monthly_return": -1.2672, "segment": "full_year"}, {"date": "2022-02", "level": 294.53, "monthly_return": -1.2672, "segment": "full_year"}, {"date": "2022-03", "level": 290.79, "monthly_return": -1.2672, "segment": "full_year"}, {"date": "2022-04", "level": 287.11, "monthly_return": -1.2672, "segment": "full_year"}, {"date": "2022-05", "level": 283.47, "monthly_return": -1.2672, "segment": "full_year"}, {"date": "2022-06", "level": 279.88, "monthly_return": -1.2672, "segment": "full_year"}, {"date": "2022-07", "level": 276.33, "monthly_return": -1.2672, "segment": "full_year"}, {"date": "2022-08", "level": 272.83, "monthly_return": -1.2672, "segment": "full_year"}, {"date": "2022-09", "level": 269.37, "monthly_return": -1.2672, "segment": "full_year"}, {"date": "2022-10", "level": 265.96, "monthly_return": -1.2672, "segment": "full_year"}, {"date": "2022-11", "level": 262.59, "monthly_return": -1.2672, "segment": "full_year"}, {"date": "2022-12", "level": 259.26, "monthly_return": -1.2672, "segment": "full_year"}, {"date": "2023-01", "level": 262.8, "monthly_return": 1.363, "segment": "full_year"}, {"date": "2023-02", "level": 266.38, "monthly_return": 1.363, "segment": "full_year"}, {"date": "2023-03", "level": 270.01, "monthly_return": 1.363, "segment": "full_year"}, {"date": "2023-04", "level": 273.69, "monthly_return": 1.363, "segment": "full_year"}, {"date": "2023-05", "level": 277.42, "monthly_return": 1.363, "segment": "full_year"}, {"date": "2023-06", "level": 281.2, "monthly_return": 1.363, "segment": "full_year"}, {"date": "2023-07", "level": 285.03, "monthly_return": 1.363, "segment": "full_year"}, {"date": "2023-08", "level": 288.92, "monthly_return": 1.363, "segment": "full_year"}, {"date": "2023-09", "level": 292.86, "monthly_return": 1.363, "segment": "full_year"}, {"date": "2023-10", "level": 296.85, "monthly_return": 1.363, "segment": "full_year"}, {"date": "2023-11", "level": 300.89, "monthly_return": 1.363, "segment": "full_year"}, {"date": "2023-12", "level": 305.0, "monthly_return": 1.363, "segment": "full_year"}, {"date": "2024-01", "level": 310.68, "monthly_return": 1.864, "segment": "full_year"}, {"date": "2024-02", "level": 316.47, "monthly_return": 1.864, "segment": "full_year"}, {"date": "2024-03", "level": 322.37, "monthly_return": 1.864, "segment": "full_year"}, {"date": "2024-04", "level": 328.38, "monthly_return": 1.864, "segment": "full_year"}, {"date": "2024-05", "level": 334.5, "monthly_return": 1.864, "segment": "full_year"}, {"date": "2024-06", "level": 340.74, "monthly_return": 1.864, "segment": "full_year"}, {"date": "2024-07", "level": 347.09, "monthly_return": 1.864, "segment": "full_year"}, {"date": "2024-08", "level": 353.56, "monthly_return": 1.864, "segment": "full_year"}, {"date": "2024-09", "level": 360.15, "monthly_return": 1.864, "segment": "full_year"}, {"date": "2024-10", "level": 366.86, "monthly_return": 1.864, "segment": "full_year"}, {"date": "2024-11", "level": 373.7, "monthly_return": 1.864, "segment": "full_year"}, {"date": "2024-12", "level": 380.67, "monthly_return": 1.864, "segment": "full_year"}, {"date": "2025-01", "level": 382.32, "monthly_return": 0.4353, "segment": "full_year"}, {"date": "2025-02", "level": 383.99, "monthly_return": 0.4353, "segment": "full_year"}, {"date": "2025-03", "level": 385.66, "monthly_return": 0.4353, "segment": "full_year"}, {"date": "2025-04", "level": 387.34, "monthly_return": 0.4353, "segment": "full_year"}, {"date": "2025-05", "level": 389.02, "monthly_return": 0.4353, "segment": "full_year"}, {"date": "2025-06", "level": 390.72, "monthly_return": 0.4353, "segment": "full_year"}, {"date": "2025-07", "level": 392.42, "monthly_return": 0.4353, "segment": "full_year"}, {"date": "2025-08", "level": 394.12, "monthly_return": 0.4353, "segment": "full_year"}, {"date": "2025-09", "level": 395.84, "monthly_return": 0.4353, "segment": "full_year"}, {"date": "2025-10", "level": 397.56, "monthly_return": 0.4353, "segment": "full_year"}, {"date": "2025-11", "level": 399.29, "monthly_return": 0.4353, "segment": "full_year"}, {"date": "2025-12", "level": 401.03, "monthly_return": 0.4353, "segment": "full_year"}, {"date": "2026-01", "level": 398.3, "monthly_return": -0.6813, "segment": "ytd"}, {"date": "2026-02", "level": 395.59, "monthly_return": -0.6813, "segment": "ytd"}, {"date": "2026-03", "level": 392.89, "monthly_return": -0.6813, "segment": "ytd"}];
+    
+const rawScenarioColors = ['#ff4d4f','#ff6b6b','#ff8787','#d9485f','#ff9f9f','#c92a2a'];
+const cagrFull = 0.09551433563756095;
+let scenarios = [
+  { id:'s1', name:'Scenario 1', contribution:300, active:true, color:rawScenarioColors[0], futureAnnualReturn:7.0, futureReturnSeries:'8, 6.5, 5, 7, 4' },
+  { id:'s2', name:'Scenario 2', contribution:500, active:true, color:rawScenarioColors[1], futureAnnualReturn:9.0, futureReturnSeries:'10, 8, 7, 6, 6' },
+  { id:'s3', name:'Scenario 3', contribution:800, active:true, color:rawScenarioColors[2], futureAnnualReturn:5.0, futureReturnSeries:'6, 5, 4.5, 4, 4' }
+];
+
+const euro = new Intl.NumberFormat('it-IT', { style:'currency', currency:'EUR', maximumFractionDigits:0 });
+const pct = new Intl.NumberFormat('it-IT', { minimumFractionDigits:2, maximumFractionDigits:2 });
+
+const els = {
+  dataMode: document.getElementById('dataMode'),
+  durationValue: document.getElementById('durationValue'),
+  durationUnit: document.getElementById('durationUnit'),
+  mode: document.getElementById('mode'),
+  startYear: document.getElementById('startYear'),
+  scenarioRows: document.getElementById('scenarioRows'),
+  addScenarioBtn: document.getElementById('addScenarioBtn'),
+  growthChart: document.getElementById('growthChart'),
+  growthTooltip: document.getElementById('growthTooltip'),
+  growthLegend: document.getElementById('growthLegend'),
+  comparisonTableBody: document.getElementById('comparisonTableBody'),
+  monthlyChart: document.getElementById('monthlyChart'),
+  monthlyTableBody: document.getElementById('monthlyTableBody'),
+  barChart: document.getElementById('barChart'),
+  scenarioSummaryGrid: document.getElementById('scenarioSummaryGrid'),
+  historicalControls: document.getElementById('historicalControls'),
+  futureControls: document.getElementById('futureControls'),
+  historicalDisabledNote: document.getElementById('historicalDisabledNote'),
+  historicalSection: document.getElementById('historicalSection'),
+  historicalSectionBanner: document.getElementById('historicalSectionBanner'),
+  futureReturnMode: document.getElementById('futureReturnMode'),
+  futureAnnualReturn: document.getElementById('futureAnnualReturn'),
+  futureReturnSeries: document.getElementById('futureReturnSeries'),
+  futureSeriesStyle: document.getElementById('futureSeriesStyle'),
+  exportPdfBtn: document.getElementById('exportPdfBtn'),
+  modeBadge: document.getElementById('modeBadge')
+};
+
+const monthSequence = monthlyHistorical.slice(1).map(row => ({
+  date: row.date,
+  level: row.level,
+  monthlyReturn: row.monthly_return == null ? null : row.monthly_return / 100,
+  year: Number(row.date.slice(0,4))
+}));
+const availableYears = [...new Set(monthSequence.map(x => x.year))];
+els.startYear.innerHTML = availableYears.map(y => `<option value="${y}">${y}</option>`).join('');
+els.startYear.value = '2012';
+
+function escapeHtml(value) {
+  return String(value).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function monthsFromInputs() {
+  const value = Math.max(1, Number(els.durationValue.value) || 1);
+  return els.durationUnit.value === 'years' ? Math.round(value * 12) : Math.round(value);
+}
+let growthChartState = null;
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+function formatElapsedLabel(month) {
+  if (month === 0) return els.durationUnit.value === 'years' ? '0 anni' : '0 mesi';
+  if (els.durationUnit.value === 'years') {
+    const years = month / 12;
+    const rounded = Math.abs(years - Math.round(years)) < 0.001
+      ? String(Math.round(years))
+      : years.toFixed(1).replace('.', ',');
+    return `${rounded} anni`;
+  }
+  return `${month} mesi`;
+}
+function niceStep(maxValue, targetSteps = 5) {
+  if (maxValue <= 0) return 1;
+  const raw = maxValue / targetSteps;
+  const pow10 = Math.pow(10, Math.floor(Math.log10(raw)));
+  const scaled = raw / pow10;
+  let nice = 1;
+  if (scaled <= 1) nice = 1;
+  else if (scaled <= 2) nice = 2;
+  else if (scaled <= 5) nice = 5;
+  else nice = 10;
+  return nice * pow10;
+}
+function formatCompact(value) {
+  if (value >= 1000000) return (value / 1000000).toFixed(1).replace('.', ',') + 'M';
+  if (value >= 1000) return (value / 1000).toFixed(0).replace('.', ',') + 'k';
+  return Math.round(value).toString();
+}
+function sequenceRates(months, startYear) {
+  let startIndex = monthSequence.findIndex(x => x.year === startYear);
+  if (startIndex < 0) startIndex = 0;
+  const rolled = monthSequence.slice(startIndex).concat(monthSequence.slice(0, startIndex));
+  const rates = [];
+  let i = 0;
+  while (rates.length < months) {
+    rates.push(rolled[i % rolled.length].monthlyReturn || 0);
+    i++;
+  }
+  return rates;
+}
+function parseReturnSeries(rawValue) {
+  const raw = String(rawValue || '')
+    .replace(/\n/g, ',')
+    .split(/[;,]+/)
+    .map(x => x.trim())
+    .filter(Boolean)
+    .map(x => Number(String(x).replace(',', '.')))
+    .filter(x => Number.isFinite(x) && x > -100);
+  return raw.map(x => x / 100);
+}
+function getScenarioFutureInputs(scenario) {
+  const annual = Number.isFinite(Number(scenario.futureAnnualReturn)) ? Number(scenario.futureAnnualReturn) : (Number(els.futureAnnualReturn.value) || 0);
+  const seriesRaw = (scenario.futureReturnSeries ?? els.futureReturnSeries.value ?? '').toString();
+  return { annual, seriesRaw };
+}
+function futureRates(months, scenario) {
+  const mode = els.futureReturnMode.value;
+  const settings = getScenarioFutureInputs(scenario || {});
+  if (mode === 'constant') {
+    const annual = settings.annual / 100;
+    const monthly = Math.pow(1 + annual, 1/12) - 1;
+    return {
+      rates: Array.from({ length: months }, () => monthly),
+      rateLabel: 'Scenario futuro',
+      rateSub: `Rendimento annuo personalizzato: ${pct.format(annual * 100)}%.`,
+      rateShort: `${pct.format(annual * 100)}% annuo`,
+      monthlyPreview: `${pct.format(monthly * 100)}% mese eq.`
+    };
+  }
+  const annualSeries = parseReturnSeries(settings.seriesRaw);
+  const safeSeries = annualSeries.length ? annualSeries : [0];
+  const style = els.futureSeriesStyle.value;
+  const rates = [];
+  for (let m = 1; m <= months; m++) {
+    const yearIdx = Math.floor((m - 1) / 12);
+    let annual;
+    if (style === 'cycle') annual = safeSeries[yearIdx % safeSeries.length];
+    else annual = safeSeries[Math.min(yearIdx, safeSeries.length - 1)];
+    rates.push(Math.pow(1 + annual, 1/12) - 1);
+  }
+  const preview = safeSeries.slice(0, 6).map(v => pct.format(v * 100) + '%').join(', ');
+  return {
+    rates,
+    rateLabel: 'Scenario futuro',
+    rateSub: `Serie personalizzata: ${preview}${safeSeries.length > 6 ? '…' : ''}`,
+    rateShort: `${safeSeries.length} anni input`,
+    monthlyPreview: `${pct.format((rates[0] || 0) * 100)}% mese eq.`
+  };
+}
+function simulateScenario(scenario, months) {
+  const contribution = Math.max(0, Number(scenario.contribution) || 0);
+  const dataMode = els.dataMode.value;
+  const histMode = els.mode.value;
+  const startYear = Number(els.startYear.value);
+  let rates = [];
+  let rateLabel = '';
+  let rateSub = '';
+  let rateShort = '';
+  let monthlyPreview = '';
+  if (dataMode === 'historical') {
+    const monthlyConstant = Math.pow(1 + cagrFull, 1/12) - 1;
+    rates = histMode === 'cagr'
+      ? Array.from({ length: months }, () => monthlyConstant)
+      : sequenceRates(months, startYear);
+    rateLabel = histMode === 'cagr' ? 'Storico MSCI World' : 'Storico MSCI World';
+    rateSub = histMode === 'cagr'
+      ? 'Media composta storica sull’intero periodo mar 2011–mar 2026.'
+      : 'Sequenza mensile ciclica costruita sulla base storica MSCI World.';
+    rateShort = histMode === 'cagr' ? `${pct.format(cagrFull * 100)}% CAGR` : `Sequenza da ${startYear}`;
+    monthlyPreview = histMode === 'cagr' ? `${pct.format(monthlyConstant * 100)}% mese eq.` : 'Rendimenti mensili storici';
+  } else {
+    const future = futureRates(months, scenario);
+    rates = future.rates;
+    rateLabel = future.rateLabel;
+    rateSub = future.rateSub;
+    rateShort = future.rateShort;
+    monthlyPreview = future.monthlyPreview;
+  }
+  let balance = 0;
+  let contributed = 0;
+  const points = [{ month:0, balance:0, contributed:0 }];
+  for (let m = 1; m <= months; m++) {
+    const rate = rates[m - 1] ?? 0;
+    balance = balance * (1 + rate) + contribution;
+    contributed += contribution;
+    points.push({ month:m, balance, contributed, rate });
+  }
+  const finalValue = points[points.length - 1].balance;
+  const gain = finalValue - contributed;
+  const totalReturn = contributed > 0 ? gain / contributed : 0;
+  return { contribution, points, contributed, finalValue, gain, totalReturn, rateLabel, rateSub, rateShort, monthlyPreview };
+}
+function renderScenarioRows() {
+  const dataMode = els.dataMode.value;
+  const futureMode = els.futureReturnMode.value;
+  els.scenarioRows.innerHTML = scenarios.map((scenario) => {
+    const futureControl = dataMode !== 'future'
+      ? ''
+      : futureMode === 'constant'
+        ? `
+          <div class="control future-only">
+            <label>Rendimento annuo scenario (%)</label>
+            <input type="number" min="-100" step="0.1" value="${Number(scenario.futureAnnualReturn ?? 0)}" data-action="futureAnnualReturn" data-id="${scenario.id}">
+          </div>
+        `
+        : `
+          <div class="control future-only">
+            <label>Serie rendimenti scenario (%)</label>
+            <input type="text" value="${escapeHtml(scenario.futureReturnSeries ?? '')}" data-action="futureReturnSeries" data-id="${scenario.id}" placeholder="8, 6, 5, 7">
+          </div>
+        `;
+    return `
+      <div class="scenario-row" data-id="${scenario.id}">
+        <div class="scenario-color" style="background:${scenario.color};"></div>
+        <div class="scenario-toggle">
+          <input type="checkbox" ${scenario.active ? 'checked' : ''} data-action="toggle" data-id="${scenario.id}" aria-label="Attiva scenario">
+        </div>
+        <div class="control">
+          <label>Nome scenario</label>
+          <input type="text" value="${escapeHtml(scenario.name)}" data-action="name" data-id="${scenario.id}" maxlength="28">
+        </div>
+        <div class="control">
+          <label>Rata mensile (€)</label>
+          <input type="number" min="0" step="50" value="${scenario.contribution}" data-action="contribution" data-id="${scenario.id}">
+        </div>
+        ${futureControl}
+        <div class="scenario-actions">
+          <button class="btn secondary no-print" type="button" data-action="remove" data-id="${scenario.id}" ${scenarios.length <= 1 ? 'disabled' : ''}>Rimuovi</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+function getActiveSimulations() {
+  const months = monthsFromInputs();
+  return scenarios.filter(s => s.active).map(s => ({
+    ...s,
+    simulation: simulateScenario(s, months)
+  }));
+}
+function renderScenarioSummaries(items) {
+  if (!items.length) {
+    els.scenarioSummaryGrid.innerHTML = '<div class="empty-state">Attiva almeno uno scenario per vedere i box di confronto.</div>';
+    return;
+  }
+  const futureMode = els.dataMode.value === 'future';
+  els.scenarioSummaryGrid.innerHTML = items.map(item => {
+    const sim = item.simulation;
+    const totalCls = sim.totalReturn >= 0 ? 'pos' : 'neg';
+    const gainCls = sim.gain >= 0 ? 'pos' : 'neg';
+    const detailLabel = futureMode ? 'Rendimento usato' : 'Metodo usato';
+    const detailValue = futureMode ? sim.rateShort : sim.rateShort;
+    return `
+      <div class="scenario-summary" style="--summary-color:${item.color}">
+        <div class="topline">
+          <div class="title">${escapeHtml(item.name)}</div>
+          <span class="tag">${euro.format(item.contribution)}/mese</span>
+        </div>
+        <div class="small" style="color:#ffffff; margin-bottom:10px;">${escapeHtml(sim.rateSub)}</div>
+        <div class="mini-grid">
+          <div class="mini-item">
+            <div class="mini-label">${detailLabel}</div>
+            <div class="mini-value">${escapeHtml(detailValue)}</div>
+          </div>
+          <div class="mini-item">
+            <div class="mini-label">Rif. mensile</div>
+            <div class="mini-value">${escapeHtml(sim.monthlyPreview)}</div>
+          </div>
+          <div class="mini-item">
+            <div class="mini-label">Versato</div>
+            <div class="mini-value">${euro.format(sim.contributed)}</div>
+          </div>
+          <div class="mini-item">
+            <div class="mini-label">Finale</div>
+            <div class="mini-value">${euro.format(sim.finalValue)}</div>
+          </div>
+          <div class="mini-item">
+            <div class="mini-label">Rendimento</div>
+            <div class="mini-value ${gainCls}">${euro.format(sim.gain)}</div>
+          </div>
+          <div class="mini-item">
+            <div class="mini-label">Totale</div>
+            <div class="mini-value ${totalCls}">${pct.format(sim.totalReturn * 100)}%</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+function renderComparisonTable(items) {
+  if (!items.length) {
+    els.comparisonTableBody.innerHTML = '<tr><td colspan="6" class="empty-state">Attiva almeno uno scenario per visualizzare il confronto.</td></tr>';
+    return;
+  }
+  els.comparisonTableBody.innerHTML = items.map(item => {
+    const sim = item.simulation;
+    const cls = sim.totalReturn >= 0 ? 'pos' : 'neg';
+    return `
+      <tr>
+        <td><span class="legend-item"><span class="dot" style="background:${item.color}"></span>${escapeHtml(item.name)}</span></td>
+        <td>${euro.format(item.contribution)}</td>
+        <td>${euro.format(sim.contributed)}</td>
+        <td>${euro.format(sim.finalValue)}</td>
+        <td>${escapeHtml(sim.rateShort)}</td>
+        <td class="${cls}">${pct.format(sim.totalReturn * 100)}%</td>
+      </tr>
+    `;
+  }).join('');
+}
+function drawGrowthChart(items) {
+  const svg = els.growthChart;
+  const width = 900, height = 460;
+  const m = { top:24, right:100, bottom:46, left:78 };
+  const innerW = width - m.left - m.right;
+  const innerH = height - m.top - m.bottom;
+  if (!items.length) {
+    growthChartState = null;
+    svg.innerHTML = `<text x="${width/2}" y="${height/2}" text-anchor="middle" fill="#afc8b8" font-size="16">Attiva almeno uno scenario per visualizzare il grafico.</text>`;
+    els.growthLegend.innerHTML = '';
+    els.growthTooltip.classList.add('hidden');
+    return;
+  }
+  const months = items[0].simulation.points.at(-1).month;
+  const maxY = Math.max(...items.flatMap(item => item.simulation.points.map(p => p.balance)), 1);
+  const yStep = niceStep(maxY, 5);
+  const yMax = Math.ceil(maxY / yStep) * yStep;
+  const x = (month) => m.left + (month / Math.max(months, 1)) * innerW;
+  const y = (value) => m.top + innerH - (value / yMax) * innerH;
+  const toPath = (arr) => arr.map((p, i) => `${i === 0 ? 'M' : 'L'} ${x(p.month).toFixed(2)} ${y(p.balance).toFixed(2)}`).join(' ');
+  let grid = '';
+  for (let v = 0; v <= yMax; v += yStep) {
+    grid += `<line x1="${m.left}" y1="${y(v)}" x2="${width - m.right}" y2="${y(v)}" stroke="rgba(255,255,255,0.08)" />`;
+    grid += `<text x="${m.left - 10}" y="${y(v) + 4}" text-anchor="end" fill="#afc8b8" font-size="12">${formatCompact(v)}</text>`;
+  }
+  let xLabels = '';
+  const ticks = 6;
+  const durationUnit = els.durationUnit.value;
+  const formatTimeTick = (monthValue) => {
+    if (durationUnit === 'years') {
+      const yearValue = monthValue / 12;
+      const rounded = Math.abs(yearValue - Math.round(yearValue)) < 0.05
+        ? String(Math.round(yearValue))
+        : yearValue.toFixed(1).replace('.', ',');
+      return `${rounded} anni`;
+    }
+    return `${Math.round(monthValue)} mesi`;
+  };
+  for (let i = 0; i <= ticks; i++) {
+    const month = Math.round(months * i / ticks);
+    const xx = x(month);
+    xLabels += `<line x1="${xx}" y1="${m.top}" x2="${xx}" y2="${m.top + innerH}" stroke="rgba(255,255,255,0.04)" />`;
+    xLabels += `<text x="${xx}" y="${height - 16}" text-anchor="middle" fill="#afc8b8" font-size="12">${formatTimeTick(month)}</text>`;
+  }
+  const paths = items.map(item => `<path d="${toPath(item.simulation.points)}" fill="none" stroke="${item.color}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"></path>`).join('');
+  const endpoints = items.map(item => {
+    const last = item.simulation.points.at(-1);
+    return `<circle cx="${x(last.month)}" cy="${y(last.balance)}" r="4.5" fill="${item.color}"></circle><text x="${x(last.month)+10}" y="${y(last.balance)+4}" fill="${item.color}" font-size="12" font-weight="700">${escapeHtml(item.name)}</text>`;
+  }).join('');
+  const topNote = els.dataMode.value === 'future'
+    ? 'Curve calcolate con rendimenti futuri personalizzati per scenario'
+    : 'Valore del portafoglio per ogni scenario';
+  svg.innerHTML = `<rect x="0" y="0" width="${width}" height="${height}" rx="18" fill="transparent"></rect>${grid}${xLabels}${paths}<g id="growthHoverLayer"></g>${endpoints}<text x="${m.left}" y="18" fill="#dcf7e4" font-size="12">${topNote}</text>`;
+  growthChartState = { items, width, height, margin:m, innerW, innerH, months, x, y, yMax };
+  els.growthLegend.innerHTML = items.map(item => `<div class="legend-item"><span class="legend-line" style="background:${item.color}"></span><span>${escapeHtml(item.name)} · ${euro.format(item.contribution)}/mese</span><span class="legend-meta">${escapeHtml(item.simulation.rateShort)}</span></div>`).join('');
+}
+function updateGrowthTooltip(event) {
+  if (!growthChartState || !growthChartState.items.length) return;
+  const svg = els.growthChart;
+  const rect = svg.getBoundingClientRect();
+  const wrapRect = svg.parentElement.getBoundingClientRect();
+  const scaleX = growthChartState.width / rect.width;
+  const scaleY = growthChartState.height / rect.height;
+  const svgX = (event.clientX - rect.left) * scaleX;
+  const svgY = (event.clientY - rect.top) * scaleY;
+  const month = clamp(Math.round(((svgX - growthChartState.margin.left) / Math.max(growthChartState.innerW, 1)) * growthChartState.months), 0, growthChartState.months);
+  const hoverLayer = document.getElementById('growthHoverLayer');
+  const hoverX = growthChartState.x(month);
+  const pointRows = growthChartState.items.map(item => {
+    const point = item.simulation.points[month];
+    const totalReturnToDate = point.contributed > 0 ? (point.balance - point.contributed) / point.contributed : 0;
+    const pointY = growthChartState.y(point.balance);
+    return { item, point, totalReturnToDate, pointY, distance: Math.abs(svgY - pointY) };
+  });
+  const selected = pointRows.reduce((best, current) => {
+    if (!best || current.distance < best.distance) return current;
+    return best;
+  }, null);
+  if (!selected) return;
+  if (hoverLayer) {
+    const guide = `<line x1="${hoverX}" y1="${growthChartState.margin.top}" x2="${hoverX}" y2="${growthChartState.height - growthChartState.margin.bottom}" stroke="rgba(255,255,255,0.28)" stroke-dasharray="5 5"></line>`;
+    const dot = `<circle cx="${hoverX}" cy="${selected.pointY}" r="6" fill="${selected.item.color}" stroke="#ffffff" stroke-width="2"></circle>`;
+    hoverLayer.innerHTML = guide + dot;
+  }
+  const timeLabel = formatElapsedLabel(month);
+  const modeLabel = els.dataMode.value === 'future' ? 'Scenario futuro' : 'Scenario storico';
+  els.growthTooltip.innerHTML = `<div class="tip-head">${timeLabel}</div><div class="tip-sub">${modeLabel} · rendimento maturato fino a questo punto</div>
+    <div class="tip-row">
+      <span class="tip-dot" style="background:${selected.item.color};"></span>
+      <div>
+        <div class="tip-name">${escapeHtml(selected.item.name)}</div>
+        <div class="tip-line">Valore: ${euro.format(selected.point.balance)} · Versato: ${euro.format(selected.point.contributed)}</div>
+        <div class="tip-line">Rendimento fino a qui: ${pct.format(selected.totalReturnToDate * 100)}%</div>
+      </div>
+    </div>`;
+  const proposedLeft = event.clientX - wrapRect.left + 16;
+  const proposedTop = event.clientY - wrapRect.top - 18;
+  const boxWidth = 300;
+  const clampedLeft = Math.min(Math.max(12, proposedLeft), Math.max(12, wrapRect.width - boxWidth - 12));
+  const clampedTop = Math.max(12, proposedTop);
+  els.growthTooltip.style.left = `${clampedLeft}px`;
+  els.growthTooltip.style.top = `${clampedTop}px`;
+  els.growthTooltip.classList.remove('hidden');
+}
+function hideGrowthTooltip() {
+  const hoverLayer = document.getElementById('growthHoverLayer');
+  if (hoverLayer) hoverLayer.innerHTML = '';
+  els.growthTooltip.classList.add('hidden');
+}
+function drawMonthlyChart() {
+  const svg = els.monthlyChart;
+  const width = 760, height = 420;
+  const m = { top:24, right:24, bottom:44, left:64 };
+  const innerW = width - m.left - m.right;
+  const innerH = height - m.top - m.bottom;
+  const maxY = Math.max(...monthlyHistorical.map(x => x.level));
+  const minY = Math.min(...monthlyHistorical.map(x => x.level));
+  const yStep = niceStep(maxY - minY, 5);
+  const yMin = Math.floor(minY / yStep) * yStep;
+  const yMax = Math.ceil(maxY / yStep) * yStep;
+  const x = i => m.left + (i / Math.max(monthlyHistorical.length - 1, 1)) * innerW;
+  const y = v => m.top + innerH - ((v - yMin) / (yMax - yMin)) * innerH;
+  let grid = '';
+  for (let v = yMin; v <= yMax; v += yStep) {
+    grid += `<line x1="${m.left}" y1="${y(v)}" x2="${width - m.right}" y2="${y(v)}" stroke="rgba(255,255,255,0.08)" />`;
+    grid += `<text x="${m.left - 8}" y="${y(v)+4}" text-anchor="end" fill="#afc8b8" font-size="12">${Math.round(v)}</text>`;
+  }
+  const tickIndexes = [0, 21, 45, 69, 93, 117, 141, 165, monthlyHistorical.length - 1];
+  let xLabels = '';
+  tickIndexes.forEach(idx => {
+    const xx = x(idx);
+    const label = monthlyHistorical[idx].date;
+    xLabels += `<line x1="${xx}" y1="${m.top}" x2="${xx}" y2="${m.top + innerH}" stroke="rgba(255,255,255,0.04)" />`;
+    xLabels += `<text x="${xx}" y="${height - 14}" text-anchor="middle" fill="#afc8b8" font-size="11">${label}</text>`;
+  });
+  const path = monthlyHistorical.map((p, i) => `${i===0?'M':'L'} ${x(i).toFixed(2)} ${y(p.level).toFixed(2)}`).join(' ');
+  svg.innerHTML = `${grid}${xLabels}<path d="${path}" fill="none" stroke="#35d07f" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"></path><circle cx="${x(monthlyHistorical.length - 1)}" cy="${y(monthlyHistorical.at(-1).level)}" r="4.5" fill="#35d07f"></circle>`;
+}
+function drawBarChart() {
+  const svg = els.barChart;
+  const width = 560, height = 420;
+  const m = { top:20, right:12, bottom:60, left:62 };
+  const innerW = width - m.left - m.right;
+  const innerH = height - m.top - m.bottom;
+  const values = annualHistorical.map(x => x.return);
+  const maxAbs = Math.max(...values.map(v => Math.abs(v)), 1);
+  const yMax = Math.ceil(maxAbs / 5) * 5;
+  const yMin = -yMax;
+  const zeroY = (0 - yMin) / (yMax - yMin) * innerH;
+  const band = innerW / annualHistorical.length;
+  const barW = Math.min(24, band * 0.65);
+  const y = (value) => m.top + innerH - ((value - yMin) / (yMax - yMin)) * innerH;
+  let grid = '';
+  for (let v = yMin; v <= yMax; v += 5) {
+    const yy = y(v);
+    grid += `<line x1="${m.left}" y1="${yy}" x2="${width - m.right}" y2="${yy}" stroke="rgba(255,255,255,0.08)" />`;
+    grid += `<text x="${m.left - 8}" y="${yy + 4}" text-anchor="end" fill="#afc8b8" font-size="12">${v}%</text>`;
+  }
+  let bars = '';
+  annualHistorical.forEach((row, idx) => {
+    const center = m.left + band * idx + band / 2;
+    const yy = y(row.return);
+    const base = m.top + zeroY;
+    const top = Math.min(yy, base);
+    const h = Math.abs(base - yy);
+    const fill = row.return >= 0 ? '#35d07f' : '#ff6b6b';
+    const opacity = row.type === 'ytd' ? 0.62 : 0.95;
+    bars += `<rect x="${center - barW/2}" y="${top}" width="${barW}" height="${Math.max(h, 1)}" rx="6" fill="${fill}" fill-opacity="${opacity}"></rect>`;
+    bars += `<text x="${center}" y="${height - 18}" text-anchor="middle" fill="#afc8b8" font-size="11">${String(row.year).slice(2)}</text>`;
+  });
+  svg.innerHTML = `${grid}<line x1="${m.left}" y1="${m.top + zeroY}" x2="${width - m.right}" y2="${m.top + zeroY}" stroke="rgba(255,255,255,0.15)" />${bars}`;
+}
+function renderMonthlyTable() {
+  els.monthlyTableBody.innerHTML = monthlyHistorical.map((row) => {
+    const ret = row.monthly_return;
+    const retCell = ret == null ? '—' : `<span class="${ret >= 0 ? 'pos' : 'neg'}">${pct.format(ret)}%</span>`;
+    let origin = 'Base';
+    if (row.segment === 'reconstructed_2011') origin = '<span class="tag">Ricostruzione 2011</span>';
+    else if (row.segment === 'full_year') origin = '<span class="tag">Anno ufficiale</span>';
+    else if (row.segment === 'ytd') origin = '<span class="tag">YTD 2026</span>';
+    return `<tr><td>${row.date}</td><td>${row.level.toFixed(2).replace('.', ',')}</td><td>${retCell}</td><td>${origin}</td></tr>`;
+  }).join('');
+}
+function updateModeVisibility() {
+  const historical = els.dataMode.value === 'historical';
+  els.historicalControls.classList.toggle('hidden', !historical);
+  els.futureControls.classList.toggle('hidden', historical);
+  els.historicalDisabledNote.classList.toggle('hidden', historical);
+  els.historicalSection.classList.toggle('section-disabled', !historical);
+  els.historicalSectionBanner.classList.toggle('hidden', historical);
+  els.modeBadge.textContent = historical ? 'Modalità attiva: Storico' : 'Modalità attiva: Scenario futuro';
+  els.mode.disabled = !historical;
+  els.startYear.disabled = !historical || els.mode.value !== 'sequence';
+  els.futureReturnMode.disabled = historical;
+  els.futureAnnualReturn.disabled = historical || els.futureReturnMode.value !== 'constant';
+  els.futureReturnSeries.disabled = historical || els.futureReturnMode.value !== 'series';
+  els.futureSeriesStyle.disabled = historical || els.futureReturnMode.value !== 'series';
+}
+function refreshDashboard() {
+  updateModeVisibility();
+  const items = getActiveSimulations();
+  renderScenarioSummaries(items);
+  renderComparisonTable(items);
+  drawGrowthChart(items);
+  hideGrowthTooltip();
+  els.addScenarioBtn.disabled = scenarios.length >= 6;
+}
+els.addScenarioBtn.addEventListener('click', () => {
+  if (scenarios.length >= 6) return;
+  const nextIndex = scenarios.length + 1;
+  const color = rawScenarioColors[(nextIndex - 1) % rawScenarioColors.length];
+  const newScenario = { id:'s' + Date.now(), name:'Scenario ' + nextIndex, contribution:1000, active:true, color, futureAnnualReturn:Number(els.futureAnnualReturn.value)||0, futureReturnSeries:(els.futureReturnSeries.value||'').toString() };
+  scenarios.push(newScenario);
+  renderScenarioRows();
+  refreshDashboard();
+});
+els.scenarioRows.addEventListener('input', (event) => {
+  const action = event.target.dataset.action;
+  const id = event.target.dataset.id;
+  if (!action || !id) return;
+  const item = scenarios.find(s => s.id === id);
+  if (!item) return;
+  if (action === 'name') item.name = event.target.value.trim() || 'Scenario';
+  if (action === 'contribution') item.contribution = Math.max(0, Number(event.target.value) || 0);
+  if (action === 'toggle') item.active = !!event.target.checked;
+  if (action === 'futureAnnualReturn') item.futureAnnualReturn = Number(event.target.value) || 0;
+  if (action === 'futureReturnSeries') item.futureReturnSeries = event.target.value;
+  refreshDashboard();
+});
+els.scenarioRows.addEventListener('change', (event) => {
+  const action = event.target.dataset.action;
+  const id = event.target.dataset.id;
+  if (action !== 'toggle' || !id) return;
+  const item = scenarios.find(s => s.id === id);
+  if (!item) return;
+  item.active = !!event.target.checked;
+  refreshDashboard();
+});
+els.scenarioRows.addEventListener('click', (event) => {
+  const btn = event.target.closest('button[data-action="remove"]');
+  if (!btn) return;
+  const id = btn.dataset.id;
+  if (scenarios.length <= 1) return;
+  scenarios = scenarios.filter(s => s.id !== id);
+  renderScenarioRows();
+  refreshDashboard();
+});
+['input','change'].forEach(evt => {
+  els.durationValue.addEventListener(evt, refreshDashboard);
+  els.durationUnit.addEventListener(evt, refreshDashboard);
+  els.mode.addEventListener(evt, refreshDashboard);
+  els.startYear.addEventListener(evt, refreshDashboard);
+  els.futureAnnualReturn.addEventListener(evt, refreshDashboard);
+  els.futureReturnSeries.addEventListener(evt, refreshDashboard);
+  els.futureSeriesStyle.addEventListener(evt, refreshDashboard);
+});
+['input','change'].forEach(evt => {
+  els.dataMode.addEventListener(evt, () => { renderScenarioRows(); refreshDashboard(); });
+  els.futureReturnMode.addEventListener(evt, () => { renderScenarioRows(); refreshDashboard(); });
+});
+els.growthChart.addEventListener('mousemove', updateGrowthTooltip);
+els.growthChart.addEventListener('mouseleave', hideGrowthTooltip);
+els.growthChart.addEventListener('touchstart', (event) => {
+  if (event.touches && event.touches[0]) updateGrowthTooltip(event.touches[0]);
+}, { passive: true });
+els.growthChart.addEventListener('touchmove', (event) => {
+  if (event.touches && event.touches[0]) updateGrowthTooltip(event.touches[0]);
+}, { passive: true });
+els.growthChart.addEventListener('touchend', hideGrowthTooltip);
+els.exportPdfBtn.addEventListener('click', () => window.print());
+
+renderScenarioRows();
+renderMonthlyTable();
+drawMonthlyChart();
+drawBarChart();
+refreshDashboard();
+  </script>
+
+  <footer class="dashboard-footer">
+    <em>© 2026 Claudio Cappa. All rights reserved. Le informazioni contenute in queste dashboard sono da intendersi a scopo puramente illustrativo e non costituiscono consulenza finanziaria.</em>
+  </footer>
+
+</body>
+</html>
